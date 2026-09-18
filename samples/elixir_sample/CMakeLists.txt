@@ -21,6 +21,14 @@ set(LIBGODOT_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../build)
 
 # Ensure godot-cpp uses the same GDExtension API/header that libgodot was built with.
 set(GODOTCPP_GDEXTENSION_DIR "${LIBGODOT_BUILD_DIR}/gdextension" CACHE PATH "" FORCE)
+set(GODOTCPP_CUSTOM_API_FILE "${LIBGODOT_BUILD_DIR}/gdextension/extension_api.json" CACHE FILEPATH "" FORCE)
+
+# The engine bundle and godot-cpp each carry a gdextension_interface.h whose
+# typedef casing differs; godot-cpp's loader only matches its own. Expose just
+# libgodot.h from the bundle so the generated header is the one that resolves.
+set(LIBGODOT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/libgodot_include)
+file(MAKE_DIRECTORY ${LIBGODOT_INCLUDE_DIR})
+file(COPY ${LIBGODOT_BUILD_DIR}/gdextension/libgodot.h DESTINATION ${LIBGODOT_INCLUDE_DIR})
 
 message(STATUS "Building godot-cpp via add_subdirectory (incremental; first build may take a while)...")
 # Keep the setup similar to the C++ sample (add_subdirectory), but isolate build artifacts
@@ -33,7 +41,7 @@ target_include_directories(libgodot_nif PRIVATE
   ${ERL_INCLUDE_PATH}
   ${GODOT_CPP_DIR}/include
   ${GODOT_CPP_DIR}/gen/include
-  ${LIBGODOT_BUILD_DIR}/gdextension
+  ${LIBGODOT_INCLUDE_DIR}
 )
 
 target_link_libraries(libgodot_nif PRIVATE godot-cpp)
@@ -161,7 +169,7 @@ add_executable(libgodot_host ${CMAKE_CURRENT_SOURCE_DIR}/../libgodot_host/host.c
 target_include_directories(libgodot_host PRIVATE
   ${GODOT_CPP_DIR}/include
   ${GODOT_CPP_DIR}/gen/include
-  ${LIBGODOT_BUILD_DIR}/gdextension
+  ${LIBGODOT_INCLUDE_DIR}
 )
 target_link_libraries(libgodot_host PRIVATE godot-cpp)
 if(HOST_HAS_WEFT_HARNESS)
