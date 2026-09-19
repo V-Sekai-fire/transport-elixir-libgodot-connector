@@ -58,12 +58,13 @@ file(MAKE_DIRECTORY "${PRIV_DIR}")
 
 if(WIN32)
   # On Windows, NIFs are DLLs.
-  set_target_properties(libgodot_nif PROPERTIES
+  # $<0:> keeps a multi-config generator from appending Release/ to the path.
+set_target_properties(libgodot_nif PROPERTIES
     OUTPUT_NAME "libgodot_nif"
     PREFIX ""
     SUFFIX ".dll"
-    RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}"
-    LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
+    LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
   )
 else()
   # NIF is expected to be a .so on both macOS and Linux.
@@ -71,7 +72,7 @@ else()
     OUTPUT_NAME "libgodot_nif"
     PREFIX ""
     SUFFIX ".so"
-    LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
   )
 endif()
 
@@ -149,13 +150,13 @@ if(HOST_HAS_WEFT_HARNESS)
   if(WIN32)
     set_target_properties(weft_client_nif PROPERTIES
       OUTPUT_NAME "weft_client_nif" PREFIX "" SUFFIX ".dll"
-      RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}"
-      LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}"
+      RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
+      LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
     )
   else()
     set_target_properties(weft_client_nif PROPERTIES
       OUTPUT_NAME "weft_client_nif" PREFIX "" SUFFIX ".so"
-      LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}"
+      LIBRARY_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
     )
   endif()
   if(APPLE)
@@ -180,7 +181,7 @@ if(NOT WIN32)
   target_link_libraries(libgodot_host PRIVATE dl)
 endif()
 set_target_properties(libgodot_host PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}"
+  RUNTIME_OUTPUT_DIRECTORY "${PRIV_DIR}$<0:>"
 )
 
 # Smoke tests with paired negative controls (CLAUDE.md rule 2). The suite
