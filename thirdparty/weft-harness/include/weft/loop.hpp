@@ -27,7 +27,6 @@
 #include "weft/command.hpp"
 #include "weft/limits.hpp"
 
-#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -51,11 +50,7 @@ using Ask = size_t (*)(void *ctx, const char *command, size_t len, unsigned char
 // uses 10ms for a proof that finishes in milliseconds; an interactor with real (possibly
 // GPU) work per command can afford to poll less often, so this takes it as a parameter
 // rather than repeating that constant's specific justification for a different workload.
-// `stop_flag`, when given, is polled alongside the bus so a signal handler can end
-// the loop: a host that only leaves on a QUIT opcode ignores SIGTERM and has to be
-// killed by whoever supervises it.
-inline int run_command_loop(void *ctx, Ask ask, uint64_t poll_ns = 10'000'000,
-		const volatile std::sig_atomic_t *stop_flag = nullptr) {
+inline int run_command_loop(void *ctx, Ask ask, uint64_t poll_ns = 10'000'000) {
 	if (!load_bus()) {
 		return 1;
 	}
@@ -122,17 +117,17 @@ inline int run_command_loop(void *ctx, Ask ask, uint64_t poll_ns = 10'000'000,
 
 	int stop = 0;
 	while (!stop) {
-		if (stop_flag && *stop_flag != 0) {
-			break;
-		}
-
 		iox2_sample_h sample = nullptr;
 		if (iox2_subscriber_receive(&sub, nullptr, &sample) != IOX2_OK) {
 			std::fprintf(stderr, "weft::run_command_loop: receive failed\n");
 			return 1;
 		}
 		if (!sample) {
-			(void)iox2_node_wait(&node, 0, static_cast<uint32_t>(poll_ns));
+			// iceoryx2 owns SIGTERM and SIGINT from node creation onward and reports
+			// them here. Discarding this is what made the host outlive its supervisor.
+			if (iox2_node_wait(&node, 0, static_cast<uint32_t>(poll_ns)) != IOX2_OK) {
+				break;
+			}
 			continue;
 		}
 
