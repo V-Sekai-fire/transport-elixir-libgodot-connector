@@ -12,7 +12,6 @@
 //   --smoke     one create/start/iterate/stop cycle, exit 0
 //   (default)   weft::run_command_loop dispatching lifecycle opcodes
 
-#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -181,10 +180,6 @@ static void host_destroy_instance() {
     g_host.instance = nullptr;
     g_host.tick_count = 0;
 }
-
-static volatile std::sig_atomic_t g_signalled = 0;
-
-static void host_on_signal(int) { g_signalled = 1; }
 
 int main(int argc, char *argv[]) {
     bool smoke = false;
@@ -376,17 +371,11 @@ int main(int argc, char *argv[]) {
         }
     };
 
-    std::signal(SIGTERM, host_on_signal);
-    std::signal(SIGINT, host_on_signal);
+    int rc = weft::run_command_loop(&ctx, ask);
 
-    int rc = weft::run_command_loop(&ctx, ask, 10'000'000, &g_signalled);
-
-    // The loop leaves on a signal without running the QUIT handler, and the
-    // instance has to go before the process does.
-    if (g_signalled) {
-        fprintf(stderr, "libgodot_host: signalled, tearing down\n");
-        host_destroy_instance();
-    }
+    // A signal ends the loop without running the QUIT handler, so the instance
+    // is destroyed here; host_destroy_instance is idempotent.
+    host_destroy_instance();
     fprintf(stderr, "libgodot_host: run_command_loop returned %d\n", rc);
     return rc;
 #else
